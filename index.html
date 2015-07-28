@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+	<head>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+		<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+		<style>
+			.bar {
+			fill: steelblue;
+			border: 1px solid #005;
+			}
+
+			.bar:hover {
+			fill: #003;
+			}
+
+			.axis {
+			font: 12px sans-serif;
+			}
+
+
+			.axis path,
+			.axis line {
+			fill: none;
+			stroke: #000;
+			shape-rendering: crispEdges;
+			}
+
+			.x.axis path {
+			display: none;
+			}
+
+			.d3-tip {
+			line-height: 1;
+			padding: 12px;
+			background: rgba(0, 0, 0, 0.8);
+			color: #eee;
+			border-radius: 2px;
+			font-family: Liberation Sans;
+			}
+
+			/* Creates a small triangle extender for the tooltip */
+			.d3-tip:after {
+			box-sizing: border-box;
+			display: inline;
+			font-size: 10px;
+			width: 100%;
+			line-height: 1;
+			color: rgba(0, 0, 0, 0.8);
+			content: "\25BC";
+			position: absolute;
+			text-align: center;
+			}
+
+			/* Style northward tooltips differently */
+			.d3-tip.n:after {
+			margin: -1px 0 0 0;
+			top: 100%;
+			left: 0;
+			}
+
+			.balance{
+			color: #0f0;
+			}
+		</style>
+	</head>
+	<body>
+		<script>
+var data = [];
+
+var margin = {top: 60, right: 20, bottom: 80, left: 60},
+    width = 1500 - margin.left - margin.right,
+    height = 900 - margin.top - margin.bottom;
+
+var x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+	
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(20);
+
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+	return "<strong>Balance:</strong> <span class='balance'>" + d.balance + "</span><br>"+
+	  "<strong>Payment:</strong><span class='payment'>"+ d.payment+d.currency+"</span><br>"+
+	  "<strong>Descr:</strong><span class='descr'>"+ d.description+"</span><br>";
+  });
+
+var data_overview = [];
+var data_payments = [];
+data.FINSTA.FINSTA03.FINSTA05.forEach(function(d) {
+	d.date = d.S61_DATUM;
+	d.balance = +d.ACC_BAL.replace(',','.');
+	data_overview.push({
+	  "date": d.date,
+	  "balance": d.balance,
+	  "currency": d.S61_MENA,
+	  "payment": d.S61_CASTKA,
+	  "description": d.S61_POST_NAR,  
+	});
+	if(d.S61_CASTKA.indexOf("-") > -1){
+		data_payments.push({
+		  "date": d.date,
+		  "balance": d.S61_CASTKA.replace("+","").replace("-","").replace(",","."),
+		  "currency": d.S61_MENA,
+		  "payment": d.S61_CASTKA,
+		  "description": d.S61_POST_NAR,  
+		});
+	}
+  });
+
+ 
+function overview_chart(data){
+
+	var svg_overview = d3.select("body").append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	svg_overview.call(tip);
+
+
+	  x.domain(data.map(function(d) { return d.date; }));
+	  y.domain([0, d3.max(data, function(d) { return d.balance; })]);
+
+	  svg_overview.append("g")
+		  .attr("class", "x axis")
+		  .attr("transform", "translate(0," + height + ")")
+		  .call(xAxis)
+		  .selectAll("text")
+		  .style("text-anchor", "end")
+		  .attr("transform", function(d) {
+			return "rotate(-65)" 
+		  });
+
+	  svg_overview.append("g")
+		  .attr("class", "y axis")
+		  .call(yAxis)
+		.append("text")
+		  .attr("transform", "rotate(-90)")
+		  .attr("y", 6)
+		  .attr("dy", ".71em")
+		  .style("text-anchor", "end")
+		  .text("Account Balance (CZK)");
+
+	  svg_overview.selectAll(".bar")
+		  .data(data)
+		.enter().append("rect")
+		  .attr("class", "bar")
+		  .attr("x", function(d) { return x(d.date); })
+		  .attr("width", x.rangeBand())
+		  .attr("y", function(d) { return y(d.balance); })
+		  .attr("height", function(d) { return height - y(d.balance); })
+		  .on('mouseover', tip.show)
+		  .on('mouseout', tip.hide);
+
+
+	function type(d) {
+	  d.balance = +d.balance;
+	  return d;
+	}
+}
+overview_chart(data_overview);
+//overview_chart(data_payments);
+		</script>
+	</body>
+</html>
